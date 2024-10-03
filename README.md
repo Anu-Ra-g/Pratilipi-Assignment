@@ -23,7 +23,7 @@ This is an overview of a microservices architecture with multiple services, incl
 3. Then you connect to the application, locally on localhost port 4000
     `http://localhost:4000/graphql`
 
-Then you will be presented  with a GraphQL API, where you can query the data, as your wish. 
+Then you will be presented  with a GraphQL API, where you can query the data, as your wish. You can use this [Postman collection](https://www.postman.com/adsf99/workspace/pratilipi/collection/66fe989e083131f0be3e7a0c?action=share&creator=27215646) to test the API *after the graphql server starts running*.
 
 
 
