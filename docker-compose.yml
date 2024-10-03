@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  user_postgres:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user_db_password
+      POSTGRES_DB: user_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  product_postgres:
+    image: postgres:14
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: product_user
+      POSTGRES_PASSWORD: product_db_password
+      POSTGRES_DB: product_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U product_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  order_postgres:
+    image: postgres:14
+    restart: always
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_db_password
+      POSTGRES_DB: order_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: wurstmeister/zookeeper:3.4.6
+    restart: always
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    restart: always
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_BROKER_ID: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+      
+  user_service:
+    image: anurag101/user_service:latest
+    ports:
+      - "3000:3000"
+    environment:
+      DB_USERNAME: user
+      DB_PASSWORD: user_db_password
+      DB_NAME: user_db
+      DB_HOST: user_postgres  
+      DB_PORT: 5432  
+      KAFKA_BROKER: kafka:9092  
+      JWT_SECRET: asdf80JA0SDHF[ajsd]
+    depends_on:
+      user_postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  product_service:
+    image: anurag101/product_service:latest
+    ports:
+      - "3001:3001"
+    environment:
+      DB_USERNAME: product_user
+      DB_PASSWORD: product_db_password
+      DB_NAME: product_db
+      DB_HOST: product_postgres  
+      DB_PORT: 5432  
+      KAFKA_BROKER: kafka:9092  
+      JWT_SECRET: asdf80JA0SDHF[ajsd]
+    depends_on:
+      product_postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  order_service:
+    image: anurag101/order_service:latest
+    ports:
+      - "3002:3002"
+    environment:
+      DB_USERNAME: order_user
+      DB_PASSWORD: order_db_password
+      DB_NAME: order_db
+      DB_HOST: order_postgres
+      DB_PORT: 5432  
+      KAFKA_BROKER: kafka:9092  
+      JWT_SECRET: asdf80JA0SDHF[ajsd]
+    depends_on:
+      order_postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  graphql_gateway: 
+    image: anurag101/graphql_gateway:latest 
+    ports:
+      - "4000:4000"  
+    environment:
+      USER_URL: user_service:3000
+      PRODUCT_URL: product_service:3001
+      ORDER_URL: order_service:3002
